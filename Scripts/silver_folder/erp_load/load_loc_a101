@@ -2,11 +2,11 @@
 ===========================================
 load script-silver table 'erp_loc_a101'
 ===========================================
-script purpose: cleaning the data from the bronze layer table and loading it to the silver layer table
+script purpose: cleaning the data from the bronze layer table and loading it to the silver layer table after truncating the old silver layer table
 ===========================================
 */
 
-
+truncate table silver.erp_loc_a101
 insert into silver.erp_loc_a101(
 	cid,
 	cntry)
