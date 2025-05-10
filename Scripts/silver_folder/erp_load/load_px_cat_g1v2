@@ -1,0 +1,17 @@
+/*
+===========================================
+load script-silver table 'erp_px_cat_g1v2'
+===========================================
+script purpose: cleaning the data from the bronze layer table and loading it to the silver layer table after truncating the old silver layer table
+===========================================
+*/
+
+truncate table silver.erp_px_cat_g1v2
+insert into silver.erp_px_cat_g1v2(
+	id,
+	cat,
+	subcat,
+	maintenance)
+select 
+*
+from bronze.erp_px_cat_g1v2
