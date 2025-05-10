@@ -1,0 +1,36 @@
+/*
+===========================================
+load script-silver table 'crm_prd_info'
+===========================================
+script purpose: cleaning the data from the bronze layer table and loading it to the silver layer table
+===========================================
+*/
+insert into silver.crm_prd_info(
+	prd_id,
+	cat_id,
+	prd_key,
+	prd_nm,
+	prd_cost,
+	prs_line,
+	prd_start_dt,
+	prd_end_dt)
+
+select
+prd_id,
+replace(substring(trim(prd_key),1,5),'-','_') as cat_id,--create a unique column for the category id part in prd_key, and switching '-' into '_' so it fits to the same naming convention as in the erp product table
+substring(trim(prd_key),7,LEN(prd_key)) as prd_key,--create a unique column for the product key after taking away the category part from prd_key
+trim(prd_nm) as prd_nm,-- remove unwanted spaces
+case
+when prd_cost is not null then prd_cost
+else 0
+end as prd_cost,
+case 
+when upper(trim(prs_line))='M' then 'Mountain'
+when upper(trim(prs_line))='R' then 'Road'
+when upper(trim(prs_line))='T' then 'Touring'
+when upper(trim(prs_line))='S' then 'Sport'
+else 'N/A'
+end as prs_line,--normalize line values and set default value
+cast(prd_start_dt as date) as prd_start_dt,-- transform into date type
+cast(DATEADD(DAY, -1,lead(prd_start_dt) over (partition by prd_key order by prd_start_dt)) as date) as prd_end_dt --fix end date so it would be logically correct
+from bronze.crm_prd_info
