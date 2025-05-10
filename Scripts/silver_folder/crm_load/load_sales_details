@@ -2,10 +2,11 @@
 ===========================================
 load script-silver table 'crm_sales_details'
 ===========================================
-script purpose: cleaning the data from the bronze layer table and loading it to the silver layer table
+script purpose: cleaning the data from the bronze layer table and loading it to the silver layer table after truncating the old silver layer table
 ===========================================
 */
 
+truncate table silver.crm_sales_details
 insert into silver.crm_sales_details(
 	sls_ord_num,
 	sls_prd_key,
