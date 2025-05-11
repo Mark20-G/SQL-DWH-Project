@@ -1,0 +1,176 @@
+/*
+===========================================
+Customer Report
+===========================================
+purpose:
+- This report consolidates key customer metrics and behaviours
+
+-------------------------------------------
+highlights:
+1. gathers essential field such as name,age,location,gender,marital status and transactions
+2.segments customers into categories(vip,regular,new) and age groups
+3. Aggregates Customer-level metrics :
+	-Total Orders
+	-Total Sales
+	-Total quantity purchased
+	-Total products
+	-lifespan (in months)
+
+4.calculate KPI's:
+	-avg order value
+	-avg monthly spend
+	-avg time between orders(in months)
+*/
+
+-------------------------------------------------
+--building the base table with the relevant info
+-------------------------------------------------
+create view gold.customer_report as
+with base as(
+select 
+c.customer_id,
+c.first_name,
+c.last_name,
+c.country,
+c.gender,
+c.marital_status,
+DATEDIFF(year,c.birth_date,getdate()) as age,
+s.order_number,
+s.product_key,
+s.quantity,
+s.sales,
+s.order_date
+from gold.dim_customer c
+left join gold.fact_sales s on s.customer_key=c.customer_key),
+
+---------------------------------------------------
+--building customer segments
+---------------------------------------------------
+
+customer_segments as (select
+customer_id,
+case 
+when count(distinct order_number)>4 then 'vip'
+when count(distinct order_number)>2 then 'regular'
+else 'new'
+end as customer_status,
+case
+when max(age)>70 then 'old'
+when max(age)>50 then 'elder'
+when max(age)>30 then 'adult'
+when max(age)>18 then 'young'
+else 'child'
+end as age_group
+from base 
+group by customer_id),
+
+-----------------------------------------------
+--aggregating customer-level metrics
+-----------------------------------------------
+customer_metrics as(select
+customer_id,
+count(distinct order_number) as total_orders,
+sum(sales) as total_sales,
+sum(quantity) as total_quantity,
+count(distinct product_key) as total_products,
+datediff(month,min(order_date),max(order_date)) as lifespan
+from base
+group by customer_id),
+
+----------------------------------------------
+--calculating KPI's
+----------------------------------------------
+
+---------------------------------
+--calculating KPI-avg order value
+---------------------------------
+
+orders_value as(select
+customer_id,
+order_number,
+sum(sales) as order_value
+from base
+group by customer_id,order_number),
+
+order_avg as(select 
+customer_id,
+avg(order_value) as avg_order_value
+from orders_value
+group by customer_id),
+
+---------------------------------
+--calculating KPI-avg month spend
+---------------------------------
+months_spend as(select
+customer_id,
+year(order_date) as order_year,
+month(order_date) as order_month,
+sum(sales) as month_spend
+from base
+group by customer_id,year(order_date),month(order_date)),
+
+month_avg as(select
+customer_id,
+avg(month_spend) as avg_month_spend
+from months_spend
+group by customer_id),
+
+---------------------------------------
+--calculating KPI-avg time between orders
+---------------------------------------
+
+orders_per_customer AS (
+  SELECT
+    customer_id,
+    order_number,
+    MIN(order_date) AS order_date
+  FROM base
+  GROUP BY customer_id, order_number
+),
+
+days_between as(SELECT
+  customer_id,
+  order_number,
+  order_date,
+  LEAD(order_date) OVER (PARTITION BY customer_id ORDER BY order_date) AS next_order_date,
+  DATEDIFF(day,order_date, LEAD(order_date) OVER (PARTITION BY customer_id ORDER BY order_date)
+  ) AS days_between_orders
+FROM orders_per_customer),
+
+avg_days_between as(select 
+customer_id,
+avg(days_between_orders) as avg_days_between_orders
+from days_between
+group by customer_id)
+
+------------------------------------------------------
+-- combining all queries for creating final report
+------------------------------------------------------
+
+SELECT
+  b.customer_id,
+  MAX(b.first_name) AS first_name,
+  MAX(b.last_name) AS last_name,
+  MAX(b.country) AS country,
+  MAX(b.gender) AS gender,
+  MAX(b.marital_status) AS marital_status,
+  MAX(b.age) AS age,
+  cs.customer_status,
+  cs.age_group,
+  cm.total_orders,
+  cm.total_sales,
+  cm.total_quantity,
+  cm.total_products,
+  cm.lifespan,
+  oa.avg_order_value,
+  ma.avg_month_spend,
+  adb.avg_days_between_orders
+FROM base b
+JOIN customer_segments cs ON cs.customer_id = b.customer_id
+JOIN customer_metrics cm ON cm.customer_id = b.customer_id
+join order_avg oa on b.customer_id=oa.customer_id
+JOIN month_avg ma ON ma.customer_id = b.customer_id
+JOIN avg_days_between adb ON adb.customer_id = b.customer_id
+GROUP BY b.customer_id, cs.customer_status, cs.age_group, cm.total_orders, cm.total_sales, 
+         cm.total_quantity, cm.total_products, cm.lifespan, oa.avg_order_value, 
+         ma.avg_month_spend, adb.avg_days_between_orders
