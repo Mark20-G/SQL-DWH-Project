@@ -40,8 +40,8 @@ s.product_key,
 s.quantity,
 s.sales,
 s.order_date
-from gold.dim_customer c
-left join gold.fact_sales s on s.customer_key=c.customer_key),
+from gold.dim_customer_copy c
+left join gold.fact_sales_copy s on s.customer_key=c.customer_key),
 
 ---------------------------------------------------
 --building customer segments
