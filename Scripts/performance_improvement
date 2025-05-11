@@ -1,0 +1,25 @@
+=================================================
+this script was written in order to improve the performance and loading time of the reports 
+=================================================
+--creating new tables based on the golden layer views
+SELECT * INTO gold.fact_sales_copy
+FROM gold.fact_sales;
+
+SELECT * INTO gold.dim_product_copy
+FROM gold.dim_product;
+
+SELECT * INTO gold.dim_customer_copy
+FROM gold.dim_customer;
+
+--creating index on main keys to improve performance
+CREATE INDEX idx_fact_sales_customer_key
+ON gold.dim_customer_copy(customer_key);
+
+CREATE INDEX idx_fact_sales_order_number
+ON gold.fact_sales_copy(order_number);
+
+CREATE INDEX idx_fact_sales_order_date
+ON gold.fact_sales_copy(order_date);
+
+CREATE INDEX idx_dim_customer_customer_id
+ON gold.dim_customer_copy(customer_id);
