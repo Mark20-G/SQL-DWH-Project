@@ -28,7 +28,7 @@ Hi! I'm Mark,
 
 I am currently building a portfolio of real-world data projects, combining SQL, data modeling, and business intelligence.
 
-This is one of several projects in my GitHub portfolio — you can also check out my 📊 Tableau Dashboards Project for visual storytelling and insights.
+This is one of several projects in my GitHub portfolio — you can also check out my [📊 Tableau Dashboards](https://github.com/Mark20-G/Tableau-Dashboards) Project for visual storytelling and insights.
 
 More projects coming soon – stay tuned! 🚀
 
