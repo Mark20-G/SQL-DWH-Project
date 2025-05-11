@@ -7,7 +7,7 @@ purpose:
 
 -------------------------------------------
 highlights:
-1. gathers essential field such as name,age,location,gender,marital status and transactions
+1. gathers essential field such as name,age,location,gender and marital status
 2.segments customers into categories(vip,regular,new) and age groups
 3. Aggregates Customer-level metrics :
 	-Total Orders
