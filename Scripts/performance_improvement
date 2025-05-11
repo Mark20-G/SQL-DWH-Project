@@ -13,7 +13,7 @@ FROM gold.dim_customer;
 
 --creating index on main keys to improve performance
 CREATE INDEX idx_fact_sales_customer_key
-ON gold.dim_customer_copy(customer_key);
+ON gold.fact_sales_copy(customer_key);
 
 CREATE INDEX idx_fact_sales_order_number
 ON gold.fact_sales_copy(order_number);
@@ -23,3 +23,6 @@ ON gold.fact_sales_copy(order_date);
 
 CREATE INDEX idx_dim_customer_customer_id
 ON gold.dim_customer_copy(customer_id);
+
+CREATE INDEX idx_fact_sales_product_key
+ON gold.fact_sales_copy(product_key);
