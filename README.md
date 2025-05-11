@@ -24,6 +24,7 @@ This project includes:
 These reports are designed to support decision-making processes with clean, aggregated, and business-focused metrics.
 
 **👨‍💻 About Me**
+
 Hi! I'm Mark,
 
 I am currently building a portfolio of real-world data projects, combining SQL, data modeling, and business intelligence.
