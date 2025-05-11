@@ -1,0 +1,175 @@
+/*
+========================================
+product report
+========================================
+purpose:
+- This report consolidates key products metrics and behaviours
+
+-------------------------------------------
+highlights:
+1. gathers essential field such as name,category,subcategory,product line,cost
+2.segments products by revenue to identify level of performance
+3. Aggregates product-level metrics :
+	-Total Orders
+	-Total Sales
+	-Total quantity sold
+	-Total unique customers
+	-lifespan (in months)
+
+4.calculate KPI's:
+	-avg order revenue
+	-avg monthly revenue
+	-avg time between orders(in days)
+*/
+-------------------------------------------------
+--building the base table with the relevant info
+-------------------------------------------------
+create view gold.product_report as
+with base as(
+select 
+p.product_key,
+p.product_name,
+p.category,
+p.subcategory,
+p.product_line,
+p.product_cost,
+s.order_number,
+s.customer_key,
+s.quantity,
+s.sales,
+s.order_date
+from gold.dim_product_copy p
+left join gold.fact_sales_copy s on s.product_key=p.product_key),
+
+---------------------------------------------------
+--building product segments
+---------------------------------------------------
+
+product_segment as(select
+product_key,
+case 
+when sum(sales)>100000 then 'High performance'
+when sum(sales)>50000 then 'good performance'
+when sum(sales)>10000 then 'medium performance'
+else 'low performance'
+end as performance_level
+from base 
+group by product_key),
+
+-----------------------------------------------
+--aggregating product-level metrics
+-----------------------------------------------
+product_metrics as(select
+product_key,
+count(distinct order_number) as total_orders,
+sum(sales) as total_sales,
+sum(quantity) as total_quantity,
+count(distinct customer_key) as total_customers,
+datediff(month,min(order_date),max(order_date)) as lifespan
+from base
+group by product_key),
+
+----------------------------------------------
+--calculating KPI's
+----------------------------------------------
+
+---------------------------------
+--calculating KPI-avg order revenue
+---------------------------------
+
+orders_revenue as(select
+product_key,
+order_number,
+sum(sales) as order_revenue
+from base
+group by product_key,order_number),
+
+order_avg as(select 
+product_key,
+avg(order_revenue) as avg_order_revenue
+from orders_revenue
+group by product_key),
+
+---------------------------------
+--calculating KPI-avg month revenue
+---------------------------------
+months_revenue as(select
+product_key,
+year(order_date) as order_year,
+month(order_date) as order_month,
+sum(sales) as month_revenue
+from base
+group by product_key,year(order_date),month(order_date)),
+
+month_avg as(select
+product_key,
+avg(month_revenue) as avg_month_revenue
+from months_revenue
+group by product_key),
+
+---------------------------------------
+--calculating KPI-avg time between orders
+---------------------------------------
+
+orders_per_product AS (
+  SELECT
+    product_key,
+    order_number,
+    MIN(order_date) AS order_date
+  FROM base
+  GROUP BY product_key, order_number
+),
+
+days_between as(SELECT
+  product_key,
+  order_number,
+  order_date,
+  LEAD(order_date) OVER (PARTITION BY product_key ORDER BY order_date) AS next_order_date,
+  DATEDIFF(day,order_date, LEAD(order_date) OVER (PARTITION BY product_key ORDER BY order_date)
+  ) AS days_between_orders
+FROM orders_per_product),
+
+avg_days_between as(select 
+product_key,
+avg(days_between_orders) as avg_days_between_orders
+from days_between
+group by product_key)
+
+------------------------------------------------------
+-- combining all queries for creating final report
+------------------------------------------------------
+
+SELECT
+  b.product_key,
+  MAX(b.product_name) AS product_name,
+  MAX(b.category) AS category,
+  MAX(b.subcategory) AS subcategory,
+  MAX(b.product_line) AS product_line,
+  MAX(b.product_cost) AS product_cost,
+  ps.performance_level,
+  pm.total_orders,
+  pm.total_sales,
+  pm.total_quantity,
+  pm.total_customers,
+  pm.lifespan,
+  oa.avg_order_revenue,
+  ma.avg_month_revenue,
+  adb.avg_days_between_orders
+FROM base b
+JOIN product_segment ps ON ps.product_key = b.product_key
+JOIN product_metrics pm ON pm.product_key = b.product_key
+join order_avg oa on b.product_key=oa.product_key
+JOIN month_avg ma ON ma.product_key = b.product_key
+JOIN avg_days_between adb ON adb.product_key = b.product_key
+GROUP BY
+	b.product_key,
+	b.product_name,
+	ps.performance_level,
+	pm.total_orders,
+    pm.total_sales,
+	pm.total_quantity,
+	pm.total_customers, 
+	pm.lifespan,
+    oa.avg_order_revenue,
+	ma.avg_month_revenue,
+	adb.avg_days_between_orders;
